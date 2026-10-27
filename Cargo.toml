@@ -2,5 +2,12 @@
 name = "rein"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95"
 
 [dependencies]
+rig-core = { version = "=0.44.0", default-features = false, features = ["reqwest", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "signal"] }
+tempfile = "3"
