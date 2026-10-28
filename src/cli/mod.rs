@@ -141,6 +141,7 @@ async fn execute<B: ModelBackend>(
         ..RunOptions::default()
     };
     let (sender, mut controls) = mpsc::channel(16);
+    let output_cancel = sender.clone();
     let signal = tokio::spawn(async move {
         if tokio::signal::ctrl_c().await.is_ok() {
             let _ = sender.send(Control::Cancel).await;
@@ -156,6 +157,7 @@ async fn execute<B: ModelBackend>(
                 .and_then(|_| stdout.flush());
             if let Err(error) = result {
                 output_error = Some(error);
+                let _ = output_cancel.try_send(Control::Cancel);
             }
         }
     };

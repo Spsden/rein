@@ -152,3 +152,60 @@ fn coding_session_cannot_silently_switch_workspace() {
     assert_eq!(before, std::fs::read(path).unwrap());
     assert_eq!(std::fs::read_dir(second).unwrap().count(), 0);
 }
+
+#[cfg(unix)]
+#[test]
+fn unusable_event_output_cancels_before_model_calls() {
+    use std::io::Write;
+    use std::net::TcpListener;
+    use std::os::{fd::OwnedFd, unix::net::UnixStream};
+    use std::process::Stdio;
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+    use std::time::Duration;
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("session.json");
+    let (output, consumer) = UnixStream::pair().unwrap();
+    drop(consumer);
+    let output: OwnedFd = output.into();
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/v1", listener.local_addr().unwrap());
+    listener.set_nonblocking(true).unwrap();
+    let stop = Arc::new(AtomicBool::new(false));
+    let server_stop = stop.clone();
+    let server = std::thread::spawn(move || {
+        let mut requests = 0;
+        while !server_stop.load(Ordering::SeqCst) {
+            if let Ok((mut stream, _)) = listener.accept() {
+                requests += 1;
+                let _ = stream.write_all(
+                    b"HTTP/1.1 503 Fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                );
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        requests
+    });
+    let result = Command::new(env!("CARGO_BIN_EXE_rein"))
+        .args(["run", path.to_str().unwrap(), "model", "hello"])
+        .env("OPENAI_API_KEY", "unused")
+        .env("OPENAI_BASE_URL", url)
+        .stdout(Stdio::from(output))
+        .output()
+        .unwrap();
+    stop.store(true, Ordering::SeqCst);
+    let requests = server.join().unwrap();
+    assert!(!result.status.success());
+    assert_eq!(
+        requests,
+        0,
+        "a disconnected consumer must not allow model/tool execution to continue invisibly; stderr: {}; stdout: {}",
+        String::from_utf8_lossy(&result.stderr),
+        String::from_utf8_lossy(&result.stdout)
+    );
+    let session = rein::storage::load(path).unwrap();
+    assert!(session.active_run.is_none());
+    assert_eq!(session.transcript.entries().len(), 1);
+}

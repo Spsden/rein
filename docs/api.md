@@ -40,7 +40,7 @@ Callbacks must be fast, nonblocking and nonpanicking. They execute in the run's
 owner task, in order. They receive conversation and possibly reasoning content;
 do not blindly log or expose all items to users. Sink failure/backpressure policy
 belongs to the host. The CLI flushes JSON Lines synchronously and reports output
-errors after settling and saving the run; it is a terminal host, not a high-load
+errors after requesting cancellation, settling and saving the run; it is a terminal host, not a high-load
 streaming server.
 
 ## Event protocol (initial, not yet a stable Dart RPC)
