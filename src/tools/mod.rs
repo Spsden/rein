@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 pub mod echo;
+pub mod workspace;
 use std::error::Error;
 use std::fmt;
 
