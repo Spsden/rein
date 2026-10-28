@@ -19,18 +19,12 @@ pub(super) async fn drive(
     let mut charged_tokens = 0_u64;
     loop {
         control::drain(session, controls)?;
+        let remaining = remaining_allowance(session, options, charged_tokens)?;
         while let Some(input) = session.steering.pop_front() {
             control::accept(session, input, emit);
         }
         let state = session.active_run.as_mut().expect("owned run");
-        if state.model_calls >= options.budget.max_model_calls {
-            return Err(RunError::ModelCallBudget);
-        }
-        if charged_tokens >= options.budget.max_completion_tokens {
-            return Err(RunError::TokenBudget);
-        }
         state.phase = RunPhase::PreparingContext;
-        let remaining = options.budget.max_completion_tokens - charged_tokens;
         let mut context =
             prepare_context(session, &options.instructions, options.max_context_bytes)
                 .map_err(|_| RunError::Context)?;
@@ -122,10 +116,27 @@ pub(super) async fn drive(
         if !session.steering.is_empty() {
             continue;
         }
-        if let Some(input) = session.followups.pop_front() {
+        if !session.followups.is_empty() {
+            remaining_allowance(session, options, charged_tokens)?;
+            let input = session.followups.pop_front().expect("nonempty queue");
             control::accept(session, input, emit);
             continue;
         }
         return Ok(());
     }
+}
+
+fn remaining_allowance(
+    session: &AgentSession,
+    options: &RunOptions,
+    charged_tokens: u64,
+) -> Result<u64, RunError> {
+    if session.active_run.as_ref().expect("owned run").model_calls >= options.budget.max_model_calls
+    {
+        return Err(RunError::ModelCallBudget);
+    }
+    if charged_tokens >= options.budget.max_completion_tokens {
+        return Err(RunError::TokenBudget);
+    }
+    Ok(options.budget.max_completion_tokens - charged_tokens)
 }

@@ -70,6 +70,84 @@ async fn live_controls_wait_until_tool_results_and_then_follow_fifo() {
 }
 
 struct CancelMidway(mpsc::Sender<Control>);
+#[tokio::test]
+async fn exhausted_budget_preserves_live_steering_and_followups() {
+    let (mut session, mut options) = setup();
+    options.budget.max_model_calls = 1;
+    let (sender, mut rx) = mpsc::channel(8);
+    let backend = Injecting {
+        script: Script::new(vec![tool_turn()]),
+        sender,
+    };
+    let mut events = vec![];
+    let result = run(
+        &mut session,
+        "budget",
+        input("start"),
+        &backend,
+        &Echo,
+        &options,
+        &mut rx,
+        &mut |e| events.push(e),
+    )
+    .await;
+    assert_eq!(result.unwrap_err(), RunError::ModelCallBudget);
+    assert_eq!(
+        session.steering.front().map(|i| i.id.as_str()),
+        Some("steer")
+    );
+    assert_eq!(
+        session.followups.front().map(|i| i.id.as_str()),
+        Some("follow")
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|e| matches!(e, Event::InputAccepted { .. }))
+            .count(),
+        1
+    );
+    assert!(crate::prepare_context(&session, "", 100_000).is_ok());
+}
+
+#[tokio::test]
+async fn exhausted_budget_does_not_accept_an_unanswerable_followup() {
+    for token_limit in [false, true] {
+        let (mut session, mut options) = setup();
+        if token_limit {
+            options.budget.max_completion_tokens = 3;
+        } else {
+            options.budget.max_model_calls = 1;
+        }
+        session.followups.push_back(input("pending"));
+        let (_sender, mut rx) = mpsc::channel(8);
+        let result = run(
+            &mut session,
+            "budget",
+            input("start"),
+            &Script::new(vec![answer()]),
+            &Echo,
+            &options,
+            &mut rx,
+            &mut |_| {},
+        )
+        .await;
+        assert_eq!(
+            result.unwrap_err(),
+            if token_limit {
+                RunError::TokenBudget
+            } else {
+                RunError::ModelCallBudget
+            }
+        );
+        assert_eq!(
+            session.followups.front().map(|i| i.id.as_str()),
+            Some("pending")
+        );
+        assert_eq!(session.transcript.entries().len(), 2);
+    }
+}
+
 impl ModelBackend for CancelMidway {
     async fn complete(
         &self,
