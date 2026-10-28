@@ -15,8 +15,9 @@ Resuming the same session preserves that header across invocations. HTTP redirec
 are disabled on conversation-scoped transports. Credentials remain environment
 configuration, never snapshot contents.
 
-The `go` command currently grants only echo; the coding mode is documented
-separately when available. This is provider integration, not a benchmark score.
+The `go` command grants only echo. Use `go-code` for explicitly authorized
+[workspace reads and edits](workspace-tools.md). This is provider integration,
+not a benchmark score.
 
 Endpoint and identity requirements were verified against the
 [official OpenCode Go documentation](https://opencode.ai/v2/docs/console/go/)

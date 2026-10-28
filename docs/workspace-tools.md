@@ -1,5 +1,16 @@
 # Workspace tools
 
+```sh
+cargo run --locked -- go-code /tmp/rein-code.json YOUR_MODEL /path/to/project 'Fix the parser bug'
+```
+
+This explicitly grants reading/editing that project to the configured OpenCode Go
+model. `code` uses the generic OpenAI-compatible environment settings instead.
+The canonical workspace path participates in the session connection identity;
+resuming against a different directory is rejected before model calls or edits.
+These modes do not execute commands or claim to have run tests. The evaluation
+host separately supplies a fixed task verifier, with explicit live-code opt-in.
+
 `WorkspaceTools::read_only(root)` grants a directory capability using `cap-std`.
 `with_edits()` is an explicit host grant adding edit/create operations. Runtime
 catalog and allow-list checks still apply. Never derive these grants from a

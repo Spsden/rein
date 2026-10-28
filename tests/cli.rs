@@ -113,3 +113,42 @@ fn mismatched_model_cannot_overwrite_existing_session() {
     assert!(!output.status.success());
     assert_eq!(before, std::fs::read(path).unwrap());
 }
+
+#[test]
+fn coding_session_cannot_silently_switch_workspace() {
+    use rein::session::{ModelSelection, ToolCatalog};
+    let directory = tempfile::tempdir().unwrap();
+    let first = directory.path().join("first");
+    let second = directory.path().join("second");
+    std::fs::create_dir(&first).unwrap();
+    std::fs::create_dir(&second).unwrap();
+    let first = std::fs::canonicalize(first).unwrap();
+    let path = directory.path().join("coding.json");
+    let session = rein::AgentSession::new(
+        "coding",
+        ModelSelection {
+            connection_id: format!("openai:workspace:{}", first.display()),
+            model_id: "model".into(),
+        },
+        ToolCatalog::default(),
+    )
+    .unwrap();
+    rein::storage::save(&session, &path).unwrap();
+    let before = std::fs::read(&path).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_rein"))
+        .args([
+            "code",
+            path.to_str().unwrap(),
+            "model",
+            second.to_str().unwrap(),
+            "edit files",
+        ])
+        .env("OPENAI_API_KEY", "unused")
+        .env("OPENAI_BASE_URL", "http://127.0.0.1:9/v1")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("workspace differs"));
+    assert_eq!(before, std::fs::read(path).unwrap());
+    assert_eq!(std::fs::read_dir(second).unwrap().count(), 0);
+}
