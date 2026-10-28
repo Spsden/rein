@@ -9,6 +9,20 @@ warning-free rustdoc and the optimized release build passed. The release binary
 completed an offline tool loop and resumed the resulting session successfully.
 No authenticated model call or hosted CI run was performed.
 
+## Iteration result — 2026-10-28
+
+At code commit `34dfee6`, 69 Cargo tests passed: 52 unit, 3 agent-task integration,
+8 CLI subprocess, 4 real-Rig loopback HTTP/SSE and 2 README doctests. All-target
+tests also passed serially. Strict Clippy, rustfmt, warning-free rustdoc and the
+optimized release build passed on macOS with Rust 1.96.1.
+
+The retained offline evaluator completed 4/4 synthetic coding tasks. Arithmetic
+received a failed test result, repaired its implementation and then passed;
+the boundary task recovered from a stale edit; the multi-file task changed both
+required files. The no-op negative control passed 0/4 (all four failed), as intended. These scripted
+results validate the harness and grading, not model intelligence or parity with
+Pi/OpenCode. Live OpenCode Go evaluation remains unrun because no key is configured.
+
 ## Reproduce
 
 The initial local result above is historical. The iteration adds queued-budget
