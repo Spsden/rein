@@ -1110,6 +1110,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "rig-core",
+ "rig-reqwest",
  "serde",
  "serde_json",
  "tempfile",

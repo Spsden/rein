@@ -77,6 +77,21 @@ fn missing_credentials_do_not_create_a_session() {
 }
 
 #[test]
+fn missing_go_credentials_do_not_fall_back_to_another_provider() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("go.json");
+    let output = Command::new(env!("CARGO_BIN_EXE_rein"))
+        .args(["go", path.to_str().unwrap(), "model", "hello"])
+        .env_remove("OPENCODE_GO_API_KEY")
+        .env("OPENAI_API_KEY", "not-for-go")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("OPENCODE_GO_API_KEY"));
+    assert!(!path.exists());
+}
+
+#[test]
 fn mismatched_model_cannot_overwrite_existing_session() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("session.json");

@@ -34,6 +34,7 @@ fn fixture(responses: Vec<(u16, String)>) -> (OpenAiBackend, thread::JoinHandle<
                     Err(e) => panic!("{e}"),
                 }
             };
+            stream.set_nonblocking(false).unwrap();
             stream
                 .set_read_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
@@ -49,7 +50,10 @@ fn fixture(responses: Vec<(u16, String)>) -> (OpenAiBackend, thread::JoinHandle<
     });
     let mut config = OpenAIConfig::new("fixture-key-not-a-secret");
     config.base_url = endpoint;
-    (OpenAiBackend::new("fixture", config), server)
+    (
+        OpenAiBackend::for_session("fixture", config, "fixture-session").unwrap(),
+        server,
+    )
 }
 
 fn read_request(stream: &mut TcpStream) -> Value {
@@ -65,6 +69,9 @@ fn read_request(stream: &mut TcpStream) -> Value {
         }
     };
     let headers = String::from_utf8_lossy(&bytes[..end]);
+    let lowercase_headers = headers.to_ascii_lowercase();
+    assert!(lowercase_headers.contains("user-agent: rein/0.1.0"));
+    assert!(lowercase_headers.contains("x-opencode-session: fixture-session"));
     assert!(headers.starts_with("POST /v1/chat/completions HTTP/1.1"));
     let length: usize = headers
         .lines()
@@ -205,4 +212,14 @@ async fn connection_mismatch_is_rejected_before_network_io() {
             .unwrap_err(),
         RunError::Model
     );
+}
+
+#[test]
+fn session_headers_reject_blank_and_header_injection() {
+    for id in ["", " ", "session\r\nx-injected: value"] {
+        assert!(matches!(
+            OpenAiBackend::for_session("fixture", OpenAIConfig::new("unused"), id),
+            Err(RunError::InvalidInput)
+        ));
+    }
 }

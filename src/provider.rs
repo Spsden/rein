@@ -9,6 +9,36 @@ pub struct OpenAiBackend {
     client: OpenAI,
 }
 impl OpenAiBackend {
+    /// A conversation-scoped transport. OpenCode Go requires client/session identity.
+    pub fn for_session(
+        connection_id: impl Into<String>,
+        config: OpenAIConfig,
+        session_id: &str,
+    ) -> Result<Self, RunError> {
+        use rig_reqwest::reqwest::{
+            Client,
+            header::{HeaderMap, HeaderValue},
+        };
+        if session_id.trim().is_empty() {
+            return Err(RunError::InvalidInput);
+        }
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-opencode-session",
+            HeaderValue::from_str(session_id).map_err(|_| RunError::InvalidInput)?,
+        );
+        let transport = Client::builder()
+            .user_agent(concat!("rein/", env!("CARGO_PKG_VERSION")))
+            .default_headers(headers)
+            .redirect(rig_reqwest::reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|_| RunError::Model)?;
+        Ok(Self {
+            connection_id: connection_id.into(),
+            client: config.connect(rig_reqwest::ReqwestClient::from(transport)),
+        })
+    }
+
     /// Saved sessions cannot change endpoints or credentials.
     pub fn new(connection_id: impl Into<String>, config: OpenAIConfig) -> Self {
         Self {
