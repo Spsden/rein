@@ -30,6 +30,12 @@ CLI / future Synapse host
 - `storage`: bounded, validated, versioned session checkpoints.
 - `cli`: environment configuration, signals, output and checkpoint policy.
 
+Within `cli`, `session` owns the shared host lifecycle and capabilities for both
+JSON commands and interactive chat. `chat` owns terminal input/commands;
+`display` renders safe answer text and tool status without changing runtime events.
+The line editor runs on a blocking worker only while waiting for user input, never
+during an active model/tool run. See [interactive CLI](cli.md).
+
 Helpers stay inside the owning feature, not a generic utilities folder. Types
 remain beside their behavior; only larger capabilities are split into modules.
 

@@ -36,6 +36,23 @@ The replacement Go key then completed a real model turn, followed by 4/4 live
 This supersedes the earlier key/subscription blocker; credentials remain ignored
 and were not committed. Hosted CI and broad Pi/OpenCode parity remain unverified.
 
+## Interactive CLI result — 2026-10-28
+
+79 Cargo tests passed: 52 library unit, 2 terminal-renderer unit, 5 task/sandbox,
+6 interactive subprocess, 8 existing CLI, 4 local-provider and 2 doctests.
+The interactive integration covers a failed provider turn followed by actual
+workspace reading/editing over Rig's HTTP/SSE adapter, continued conversation,
+output sanitization, session resume, incomplete/oversized paste rejection and
+credential/corrupt-session protection. Existing JSON CLI regressions still pass.
+
+Two additional POSIX pseudo-terminal checks passed with debug and release binaries:
+line editing, Up-arrow history including restart/literal slash prompts, Ctrl-C
+while editing/pasting, Ctrl-D, and cancelling a partial model stream before a
+successful next turn. Strict Clippy and formatting checks passed. An authenticated
+OpenCode Go `glm-5.3-flash` chat completed two turns and correctly recalled a word
+from the preceding turn (2 calls, 93 provider-reported output tokens). These are
+terminal/conversation checks, not a new coding-quality benchmark.
+
 ## Reproduce commands
 
 The initial local result above is historical. The iteration adds queued-budget
@@ -53,6 +70,8 @@ cargo test --locked -- --test-threads=1
 cargo clippy --locked --all-targets -- -D warnings
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps
 cargo build --release --locked
+python3 tests/terminal_cli.py
+python3 tests/terminal_cli.py target/release/rein
 ```
 
 After the dependencies are cached, add `--offline` to Cargo build/test/check/doc
@@ -78,6 +97,8 @@ No API keys, paid requests or real effectful tools are required by any test.
   and incompatible snapshots, dangling evidence, oversized files and IO errors.
 - CLI subprocesses: offline loop, resume, valid JSON Lines, help without keys,
   invalid arguments and corrupt-session preservation.
+- Interactive CLI: commands, prompt history, multiline limits, EOF, streamed
+  answers, real file tools after provider failure, and POSIX terminal cancellation.
 - Real Rig adapter: local HTTP request path/body, streamed text and tool calls,
   correlated result replay, provider usage, connection isolation, authentication
   failure redaction, truncated SSE and streaming admission limits.

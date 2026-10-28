@@ -7,6 +7,28 @@ model/provider primitives.
 
 Requires Rust 1.95 or newer. The first build downloads the locked dependencies.
 
+### Interactive coding chat
+
+```sh
+cargo build --locked
+# Export OPENCODE_GO_API_KEY first. For your own trusted .env:
+set -a
+source .env
+set +a
+cargo run --locked -- chat /tmp/rein-chat.json glm-5.3-flash /path/to/project
+```
+
+Type tasks at `you >`; answers stream as readable text and tool activity is shown.
+Up/Down recall prompts; `/paste` collects multiple lines through `/end`.
+Ctrl-C cancels the current turn without closing chat; `/exit` or Ctrl-D exits.
+Reuse the command to resume the saved conversation. The model and workspace must
+match. Choosing a workspace grants file reads and edits, **not shell execution**.
+Run tests yourself and review changes. Live turns consume your provider allowance.
+See the [interactive CLI guide](docs/cli.md) for commands, failure handling,
+OpenAI-compatible setup and an offline demo that needs no credentials.
+
+### One-shot JSON commands
+
 ```sh
 cargo build --locked
 cargo run --locked -- demo /tmp/rein-demo.json "Hello Rein"
@@ -27,7 +49,8 @@ cargo run --locked -- run /tmp/rein-live.json YOUR_MODEL "Hello"
 endpoint (typically ending in `/v1`). A local server that ignores authentication
 can use a placeholder key. A custom URL receives your key and conversation;
 only configure endpoints you trust. The model/connection must match when resuming.
-Ctrl-C requests cancellation and saves the settled session before exiting nonzero.
+In one-shot mode, Ctrl-C requests cancellation and saves the settled session
+before exiting nonzero.
 
 `run`/`go` grant only typed `echo`. Opt-in `code`/`go-code` modes authorize
 [workspace reading, search and guarded edits](docs/workspace-tools.md).
@@ -135,7 +158,7 @@ src/
 ├── provider.rs             Rig-backed OpenAI Chat Completions streaming adapter
 ├── storage.rs              Versioned atomic snapshots
 ├── storage/tests.rs
-├── cli/                    Thin command-line host and offline demo backend
+├── cli/                    Command routing, shared session host, chat, display and demo
 ├── main.rs                 Executable entry point
 ├── tools/
 │   ├── mod.rs              Catalog, pending calls and tool errors

@@ -16,7 +16,8 @@ are disabled on conversation-scoped transports. Credentials remain environment
 configuration, never snapshot contents.
 
 The `go` command grants only echo. Use `go-code` for explicitly authorized
-[workspace reads and edits](workspace-tools.md). This is provider integration,
+[workspace reads and edits](workspace-tools.md), or `chat SESSION.json MODEL WORKSPACE`
+for the [interactive terminal](cli.md) with the same file tools. This is provider integration,
 not a benchmark score.
 
 Endpoint and identity requirements were verified against the

@@ -2,10 +2,12 @@
 
 ```sh
 cargo run --locked -- go-code /tmp/rein-code.json YOUR_MODEL /path/to/project 'Fix the parser bug'
+# Or start an interactive conversation with the same grants:
+cargo run --locked -- chat /tmp/rein-code.json YOUR_MODEL /path/to/project
 ```
 
 This explicitly grants reading/editing that project to the configured OpenCode Go
-model. `code` uses the generic OpenAI-compatible environment settings instead.
+model. `code`/`chat-openai` use the generic OpenAI-compatible environment settings instead.
 The canonical workspace path participates in the session connection identity;
 resuming against a different directory is rejected before model calls or edits.
 These modes do not execute commands or claim to have run tests. The evaluation
