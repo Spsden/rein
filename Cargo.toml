@@ -13,3 +13,4 @@ futures = "0.3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "signal", "process", "io-util"] }
 tempfile = "3"
 cap-std = "=4.0.3"
+rustyline = { version = "17", default-features = false }
