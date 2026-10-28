@@ -55,7 +55,7 @@ pub(super) async fn execute(
             {
                 Ok(Ok(text)) if text.len() <= options.max_tool_result_bytes => Ok(text),
                 Ok(Ok(_)) => Err("Tool result exceeded byte limit".into()),
-                Ok(Err(_)) => Err("Tool execution failed".into()),
+                Ok(Err(error)) => Err(error.to_string()),
                 Err(error) => {
                     interrupted = Some(error);
                     Err("Tool interrupted: external outcome may be unknown; do not automatically retry".into())

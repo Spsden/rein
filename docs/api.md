@@ -17,8 +17,12 @@ folded Rig response. Propagate truncation/error as `RunError`, never as a comple
 assistant turn. Model implementations are trusted host code, not plugins loaded
 from a session. `OpenAiBackend` checks the connection ID before any network IO.
 
-`ToolExecutor::execute` receives a complete Rig `ToolCall` and returns text or an
-error. Validate typed arguments, including unknown fields and size, even if the
+`ToolExecutor::execute` receives a complete Rig `ToolCall` and returns text or a
+`ToolError`. `InvalidArguments` and `Conflict` carry static corrective messages
+that the model may see; `Host(String)` preserves private operational details
+without exposing them through tool results. Do not put secrets into public error
+messages, and do not blindly log the error's Debug representation.
+Validate typed arguments, including unknown fields and size, even if the
 catalog advertises a JSON schema. The runtime does not implement a general JSON
 Schema validator. The builtin `Echo` uses a strict serde argument type matching
 its schema. The host owns sandboxing, secrets, approvals and output redaction;

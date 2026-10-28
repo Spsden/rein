@@ -21,7 +21,35 @@ pub trait ModelBackend {
 /// Dropping the future cancels waiting, not necessarily an external effect.
 #[allow(async_fn_in_trait)]
 pub trait ToolExecutor {
-    async fn execute(&self, call: &ToolCall) -> Result<String, String>;
+    async fn execute(&self, call: &ToolCall) -> Result<String, ToolError>;
+}
+
+/// Static corrective feedback is safe for the model; operational details stay private.
+#[derive(Debug)]
+pub enum ToolError {
+    InvalidArguments(&'static str),
+    Conflict(&'static str),
+    Host(String),
+}
+impl fmt::Display for ToolError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidArguments(message) => write!(f, "Invalid arguments: {message}"),
+            Self::Conflict(message) => write!(f, "Conflict: {message}"),
+            Self::Host(_) => f.write_str("Tool execution failed"),
+        }
+    }
+}
+impl std::error::Error for ToolError {}
+impl From<String> for ToolError {
+    fn from(message: String) -> Self {
+        Self::Host(message)
+    }
+}
+impl From<&str> for ToolError {
+    fn from(message: &str) -> Self {
+        Self::Host(message.into())
+    }
 }
 
 #[derive(Debug)]

@@ -119,7 +119,7 @@ async fn complete_tool_loop_has_correlated_history_and_ordered_events() {
 
 struct Counter(Cell<u32>);
 impl ToolExecutor for Counter {
-    async fn execute(&self, _: &ToolCall) -> Result<String, String> {
+    async fn execute(&self, _: &ToolCall) -> Result<String, ToolError> {
         self.0.set(self.0.get() + 1);
         Ok("ok".into())
     }
@@ -289,7 +289,7 @@ async fn deadline_interrupts_a_hanging_model() {
 
 struct InterruptedTool(mpsc::Sender<Control>);
 impl ToolExecutor for InterruptedTool {
-    async fn execute(&self, _: &ToolCall) -> Result<String, String> {
+    async fn execute(&self, _: &ToolCall) -> Result<String, ToolError> {
         self.0.try_send(Control::Cancel).unwrap();
         pending().await
     }
@@ -396,7 +396,7 @@ async fn excessive_tokens_response_size_and_tool_count_fail_before_effects() {
 
 struct FailingOrLarge(bool);
 impl ToolExecutor for FailingOrLarge {
-    async fn execute(&self, _: &ToolCall) -> Result<String, String> {
+    async fn execute(&self, _: &ToolCall) -> Result<String, ToolError> {
         if self.0 {
             Err("private host detail".into())
         } else {
@@ -453,4 +453,24 @@ async fn model_error_is_terminal_and_active_run_cannot_be_overwritten() {
     );
     assert_eq!(session.active_run.as_ref().unwrap().id, "existing");
     assert_eq!(session.transcript.entries().len(), 1);
+}
+
+#[tokio::test]
+async fn invalid_tool_arguments_return_actionable_feedback_without_host_details() {
+    let (mut session, options) = setup();
+    let backend = Script::new(vec![
+        response(vec![AssistantContent::ToolCall(call(
+            "invalid",
+            "echo",
+            json!({"text": 42}),
+        ))]),
+        answer(),
+    ]);
+    invoke(&mut session, &backend, &Echo, &options)
+        .await
+        .0
+        .unwrap();
+    let request = serde_json::to_string(&backend.requests.borrow()[1]).unwrap();
+    assert!(request.contains("echo requires exactly one string field: text"));
+    assert!(request.contains("Invalid arguments"));
 }
