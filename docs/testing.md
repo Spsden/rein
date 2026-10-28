@@ -21,9 +21,22 @@ received a failed test result, repaired its implementation and then passed;
 the boundary task recovered from a stale edit; the multi-file task changed both
 required files. The no-op negative control passed 0/4 (all four failed), as intended. These scripted
 results validate the harness and grading, not model intelligence or parity with
-Pi/OpenCode. Live OpenCode Go evaluation remains unrun because no key is configured.
+Pi/OpenCode. At that iteration, live OpenCode Go evaluation had not run because
+no key was configured.
 
-## Reproduce
+## First authenticated live result — 2026-10-28
+
+At `ba5866b`, 71 Cargo tests passed (52 unit, 5 task/native-sandbox, 8 CLI,
+4 loopback-provider and 2 doctests), with strict Clippy, formatting and diff checks
+clean. The two native probes separately verified outside-file/oracle write denial,
+network denial, missing credential variables and denied compile-time embedding.
+The replacement Go key then completed a real model turn, followed by 4/4 live
+`glm-5.3-flash` coding tasks under the restricted verifier. See
+[measured live results](evaluation.md#first-live-result--2026-10-28).
+This supersedes the earlier key/subscription blocker; credentials remain ignored
+and were not committed. Hosted CI and broad Pi/OpenCode parity remain unverified.
+
+## Reproduce commands
 
 The initial local result above is historical. The iteration adds queued-budget
 regressions, OpenCode Go identity/credential checks, typed corrective tool errors,

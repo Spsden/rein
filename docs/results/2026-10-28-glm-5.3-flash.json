@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-28",
+  "harness_commit": "ba5866b",
+  "run_count": 1,
+  "execution_policy": "macos-seatbelt",
+  "suite_version": 1,
+  "mode": "live-opencode-go",
+  "model": "glm-5.3-flash",
+  "passed": 4,
+  "total": 4,
+  "cases": [
+    {
+      "id": "arithmetic",
+      "passed": true,
+      "baseline_failed": true,
+      "model_calls": 5,
+      "completion_tokens": 149,
+      "test_calls": 1,
+      "tool_errors": 0,
+      "elapsed_ms": 13218,
+      "run_error": null,
+      "verification_stage": "tests"
+    },
+    {
+      "id": "unicode",
+      "passed": true,
+      "baseline_failed": true,
+      "model_calls": 6,
+      "completion_tokens": 412,
+      "test_calls": 1,
+      "tool_errors": 0,
+      "elapsed_ms": 29264,
+      "run_error": null,
+      "verification_stage": "tests"
+    },
+    {
+      "id": "boundary-recovery",
+      "passed": true,
+      "baseline_failed": true,
+      "model_calls": 5,
+      "completion_tokens": 423,
+      "test_calls": 1,
+      "tool_errors": 0,
+      "elapsed_ms": 19990,
+      "run_error": null,
+      "verification_stage": "tests"
+    },
+    {
+      "id": "multi-file",
+      "passed": true,
+      "baseline_failed": true,
+      "model_calls": 4,
+      "completion_tokens": 368,
+      "test_calls": 1,
+      "tool_errors": 0,
+      "elapsed_ms": 14705,
+      "run_error": null,
+      "verification_stage": "tests"
+    }
+  ]
+}

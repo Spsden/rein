@@ -3,6 +3,28 @@
 This is a small regression/evaluation suite, **not a Pi/OpenCode parity claim**.
 It separates runtime correctness from a model's ability to solve tasks.
 
+## First live result — 2026-10-28
+
+At harness commit `ba5866b`, OpenCode Go `glm-5.3-flash` passed **4/4** tasks
+using the native macOS subprocess restrictions. This was one fresh run per task,
+not an offline script. All baselines compiled and failed tests before model use;
+all final implementations passed the independent verifier and called `run_tests`.
+
+| Task | Passed | Model calls | Reported output tokens | Elapsed seconds |
+| --- | --- | --- | --- | --- |
+| Arithmetic | Yes | 5 | 149 | 13.2 |
+| Unicode | Yes | 6 | 412 | 29.3 |
+| Inclusive boundaries | Yes | 5 | 423 | 20.0 |
+| Multi-file fix | Yes | 4 | 368 | 14.7 |
+
+Total: 20 model calls, 1,352 reported output tokens and 77.2 seconds of summed
+task time, including verification. No tool errors or run errors occurred. Unlike
+the offline script, the live run had no injected edit conflict or failed-test
+repair. These four small tasks and a single model/run are insufficient for broad
+reliability or comparative claims. No same-model Pi/OpenCode comparison has run.
+The [machine-readable result](results/2026-10-28-glm-5.3-flash.json) contains no
+credentials or conversation/trace payloads.
+
 ## Offline regression
 
 ```sh
