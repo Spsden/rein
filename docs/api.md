@@ -89,6 +89,11 @@ an explicit host-controlled redaction boundary.
 
 ## Synapse / Dart boundary
 
+For a concrete host with workspace tools and a fixed test executor, inspect
+`evaluation/mod.rs` and `examples/evaluate.rs`. That host deliberately keeps
+verification commands outside the core runtime and requires opt-in before live
+generated-code execution. General coding CLI modes expose file tools only.
+
 This implementation has no Dart FFI, HTTP endpoint or bidirectional stdio RPC.
 The CLI accepts one prompt per invocation and resumes from a session path. The
 library channel already defines live control semantics. A future Dart process

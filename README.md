@@ -29,8 +29,20 @@ can use a placeholder key. A custom URL receives your key and conversation;
 only configure endpoints you trust. The model/connection must match when resuming.
 Ctrl-C requests cancellation and saves the settled session before exiting nonzero.
 
-Only the typed, side-effect-free `echo` tool is enabled by the CLI. There is no
-shell, filesystem tool, automatic retry, HTTP server or Dart binding.
+`run`/`go` grant only typed `echo`. Opt-in `code`/`go-code` modes authorize
+[workspace reading, search and guarded edits](docs/workspace-tools.md).
+There is no arbitrary shell, automatic retry, HTTP server or Dart binding.
+
+For OpenCode Go setup see [provider configuration](docs/opencode-go.md). To test
+complete coding workflows, see [agent-task evaluation](docs/evaluation.md):
+
+```sh
+cargo run --locked --example evaluate -- offline /tmp/rein-eval-001
+```
+
+That offline backend knows the answers; its result verifies orchestration, not
+model intelligence. Live evaluation requires your Go key and explicit execution
+opt-in in an externally sandboxed environment.
 
 See [architecture](docs/architecture.md), [embedding and events](docs/api.md),
 [testing](docs/testing.md), and the runnable [library example](examples/library.rs).
@@ -148,7 +160,8 @@ available as re-exports; definitions live in their owning modules.
 
 Session fields remain public state. Hosts must validate ingestion and use one
 exclusive owner per session; a snapshot is data, not a capability grant. The CLI
-rebuilds the tool catalog and grants only `echo` on every invocation.
+rebuilds its tool catalog and permissions on every invocation. Coding sessions
+are bound to the explicitly selected canonical workspace path.
 
 ## Important limits
 

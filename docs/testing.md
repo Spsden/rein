@@ -11,6 +11,12 @@ No authenticated model call or hosted CI run was performed.
 
 ## Reproduce
 
+The initial local result above is historical. The iteration adds queued-budget
+regressions, OpenCode Go identity/credential checks, typed corrective tool errors,
+capability-scoped workspace tools and full coding-task integration. Run
+`cargo test --locked --test agent_tasks` for task execution and independent grading;
+see [evaluation](evaluation.md) for artifacts, negative controls and live runs.
+
 Run from the repository root:
 
 ```sh
@@ -48,6 +54,11 @@ No API keys, paid requests or real effectful tools are required by any test.
 - Real Rig adapter: local HTTP request path/body, streamed text and tool calls,
   correlated result replay, provider usage, connection isolation, authentication
   failure redaction, truncated SSE and streaming admission limits.
+- Workspace tools: stale/ambiguous/overlapping edits, permissions, UTF-8, strict
+  arguments, read-only policy, create collisions, bounded output and symlink escapes.
+- Agent tasks: four real compile/test workflows, failed-test repair, edit-conflict
+  recovery, two-file edits, independent grading, persisted valid transcripts and
+  a no-op agent that cannot pass by claiming success.
 - README examples are Rust doctests; the library example is compiled by
   `cargo clippy --all-targets` and `cargo test --all-targets`.
 
