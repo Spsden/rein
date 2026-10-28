@@ -47,13 +47,31 @@ Run in your own OS/container sandbox with only the synthetic task data:
 cargo run --locked --example evaluate -- live YOUR_MODEL /tmp/rein-live-001 --allow-code-execution
 ```
 
+On macOS, append `--macos-sandbox` to restrict the compiler/test subprocesses:
+
+```sh
+cargo run --locked --example evaluate -- live YOUR_MODEL /tmp/rein-live-002 --allow-code-execution --macos-sandbox
+```
+
+The compiler gets task-directory access plus system/toolchain/SDK reads. The test
+process can read its executable/runtime and scratch directory, write only scratch
+files, and cannot directly access the network or oracle/source files. SDK/linker
+discovery occurs before entering the restricted process, avoiding Xcode cache
+writes outside the task. Model requests remain in the parent process.
+Native probes verify denied outside reads/writes, oracle tampering, network access,
+credential inheritance and compile-time file embedding. This is a focused Seatbelt
+profile, not an audited hostile-code container or a CPU/memory quota. Parent
+processes already inside an OS sandbox may be unable to launch it; failed task
+baselines abort before model calls. Other platforms require an external sandbox.
+
 **Live mode compiles and executes model-edited Rust.** The opt-in is intentional:
-directory-scoped tools do not sandbox compiled programs. Verification subprocesses
+directory-scoped tools alone do not sandbox compiled programs. Verification subprocesses
 do not inherit provider keys/other credential variables, but retain toolchain
 discovery variables including PATH/HOME. Their filesystem/network permissions are
-those of the enclosing process. Timeouts kill direct children, not arbitrary
-descendant process trees. Use an external sandbox before live runs; this runner
-is not a security boundary against hostile generated code.
+those of the enclosing process unless the macOS restriction is enabled. Timeouts
+kill direct children, not arbitrary descendant process trees. Use the native
+restriction or an external sandbox before live runs; this runner is not a complete
+security boundary against hostile generated code.
 
 Live mode calls the actual configured model, not the offline solution script.
 It uses at most 12 model calls, 8,192 reported output tokens and 180 seconds per
@@ -64,7 +82,7 @@ Cancellation of the entire evaluator process is not crash-safe tool journaling.
 
 ## Artifacts and interpretation
 
-`report.json` records suite version, mode, model, pass/fail, model-call count,
+`report.json` records suite version, execution policy, mode, model, pass/fail, model-call count,
 reported completion tokens, tool errors, test calls, elapsed time and run error.
 Every case also retains `workspace/`, `oracle.rs`, `events.jsonl`, `session.json`
 and `verification.json`. Reports are updated after each completed case. Inspect

@@ -1,4 +1,5 @@
 //! Reusable benchmark driver for the example executable and offline integration tests.
+mod sandbox;
 mod script;
 mod tasks;
 mod verify;
@@ -24,6 +25,7 @@ use tokio::sync::mpsc;
 
 #[derive(Serialize)]
 pub struct Report {
+    pub execution_policy: String,
     pub suite_version: u32,
     pub mode: String,
     pub model: String,
@@ -73,6 +75,7 @@ impl ModelBackend for Backend {
 }
 
 struct Tools {
+    sandboxed: bool,
     workspace: WorkspaceTools,
     directory: PathBuf,
     checks: Cell<usize>,
@@ -88,7 +91,7 @@ impl ToolExecutor for Tools {
             ));
         }
         self.checks.set(self.checks.get() + 1);
-        let result = verify::verify(&self.directory)
+        let result = verify::verify(&self.directory, self.sandboxed)
             .await
             .map_err(|e| ToolError::Host(e.to_string()))?;
         serde_json::to_string(&result).map_err(|e| ToolError::Host(e.to_string()))
@@ -98,6 +101,10 @@ impl ToolExecutor for Tools {
 /// Output must be a NEW directory; existing benchmark artifacts are never replaced.
 /// Live execution is deliberately opt-in: it runs model-edited Rust, not an OS sandbox.
 pub async fn run(arguments: &[String]) -> Result<Report, Box<dyn Error>> {
+    let (arguments, sandboxed) = match arguments.split_last() {
+        Some((flag, rest)) if flag == "--macos-sandbox" => (rest, true),
+        _ => (arguments, false),
+    };
     let (mode, model, output, config) = match arguments {
         [mode, output] if mode == "offline" => ("offline-script", "script".to_owned(), output, None),
         [mode, output] if mode == "negative-control" => ("negative-control", "no-op".to_owned(), output, None),
@@ -116,6 +123,12 @@ pub async fn run(arguments: &[String]) -> Result<Report, Box<dyn Error>> {
         std::fs::set_permissions(output, std::fs::Permissions::from_mode(0o700))?;
     }
     let mut report = Report {
+        execution_policy: if sandboxed {
+            "macos-seatbelt"
+        } else {
+            "external-or-unsandboxed"
+        }
+        .into(),
         suite_version: 1,
         mode: mode.into(),
         model: model.clone(),
@@ -138,8 +151,17 @@ pub async fn run(arguments: &[String]) -> Result<Report, Box<dyn Error>> {
             task.tests
         );
         std::fs::write(directory.join("oracle.rs"), oracle)?;
-        let baseline_failed = !verify::verify(&directory).await?.passed;
+        let baseline = verify::verify(&directory, sandboxed).await?;
+        if baseline.stage != "tests" || baseline.passed {
+            return Err(format!(
+                "task baseline must compile and fail tests before model use: {}",
+                baseline.diagnostics
+            )
+            .into());
+        }
+        let baseline_failed = !baseline.passed;
         let tools = Tools {
+            sandboxed,
             workspace: WorkspaceTools::read_only(&workspace)?.with_edits(),
             directory: directory.clone(),
             checks: Cell::new(0),
@@ -201,7 +223,7 @@ pub async fn run(arguments: &[String]) -> Result<Report, Box<dyn Error>> {
             .ok()
             .and_then(|outcome| outcome.completion_tokens);
         let run_error = result.err().map(|e| e.to_string());
-        let verification = verify::verify(&directory).await?;
+        let verification = verify::verify(&directory, sandboxed).await?;
         let allowed_files = unchanged_file_set(&workspace, task.files)?;
         let passed = baseline_failed
             && run_error.is_none()

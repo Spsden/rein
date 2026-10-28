@@ -12,13 +12,17 @@ pub(super) struct Verification {
     pub diagnostics: String,
 }
 
-pub(super) async fn verify(directory: &Path) -> Result<Verification, Box<dyn std::error::Error>> {
+pub(super) async fn verify(
+    directory: &Path,
+    sandboxed: bool,
+) -> Result<Verification, Box<dyn std::error::Error>> {
     let mut compile = Command::new("rustc");
     compile
         .arg(directory.join("oracle.rs"))
         .args(["--edition=2024", "--test", "-o"])
         .arg(directory.join("test-bin"));
-    let (passed, diagnostics) = command(compile, Duration::from_secs(30)).await?;
+    let compile = super::sandbox::wrap(compile, directory, true, sandboxed)?;
+    let (passed, diagnostics) = command(compile, Duration::from_secs(30), directory).await?;
     if !passed {
         return Ok(Verification {
             passed,
@@ -28,7 +32,8 @@ pub(super) async fn verify(directory: &Path) -> Result<Verification, Box<dyn std
     }
     let mut tests = Command::new(directory.join("test-bin"));
     tests.arg("--test-threads=1");
-    let (passed, diagnostics) = command(tests, Duration::from_secs(5)).await?;
+    let tests = super::sandbox::wrap(tests, directory, false, sandboxed)?;
+    let (passed, diagnostics) = command(tests, Duration::from_secs(5), directory).await?;
     Ok(Verification {
         passed,
         stage: "tests",
@@ -39,7 +44,13 @@ pub(super) async fn verify(directory: &Path) -> Result<Verification, Box<dyn std
 async fn command(
     mut command: Command,
     deadline: Duration,
+    directory: &Path,
 ) -> Result<(bool, String), Box<dyn std::error::Error>> {
+    let sdk_root = command
+        .as_std()
+        .get_envs()
+        .find(|(name, _)| *name == "SDKROOT")
+        .and_then(|(_, value)| value.map(std::ffi::OsStr::to_owned));
     command
         .env_clear()
         .stdin(Stdio::null())
@@ -59,6 +70,15 @@ async fn command(
             command.env(name, value);
         }
     }
+    let temporary = directory.join("tmp");
+    if let Some(sdk) = sdk_root {
+        command.env("SDKROOT", sdk);
+    }
+    std::fs::create_dir_all(&temporary)?;
+    command
+        .env("TMPDIR", &temporary)
+        .env("TMP", &temporary)
+        .env("TEMP", &temporary);
     let mut child = command.spawn()?;
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
@@ -74,10 +94,11 @@ async fn command(
         );
         out_result?;
         err_result?;
+        let status = status?;
         Ok::<_, std::io::Error>((
-            status?.success(),
+            status.success(),
             format!(
-                "{}{}",
+                "{status}\n{}{}",
                 String::from_utf8_lossy(&out),
                 String::from_utf8_lossy(&err)
             ),
