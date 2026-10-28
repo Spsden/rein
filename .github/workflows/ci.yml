@@ -14,6 +14,8 @@ jobs:
       - run: cargo fmt --check
       - run: cargo test --locked --all-targets
       - run: cargo test --locked --doc
+      - run: cargo build --locked
+      - run: python3 tests/terminal_cli.py
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo doc --locked --no-deps
         env:
