@@ -68,6 +68,9 @@ correlation labels, not deduplication or exactly-once keys.
 There is no separate planner, multi-agent swarm, plugin loader or global mutable
 session registry. `RunPhase` includes reserved checkpoint/approval states, but
 the current runtime does not implement human approval pauses.
+The opt-in CLI shell tool asks for confirmation within its host executor future.
+The runtime still sees an ordinary tool call and can cancel or time it out;
+there is no persisted approval or separate scheduler state.
 
 ## Limits and failure policy
 

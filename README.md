@@ -22,8 +22,10 @@ Type tasks at `you >`; answers stream as readable text and tool activity is show
 Up/Down recall prompts; `/paste` collects multiple lines through `/end`.
 Ctrl-C cancels the current turn without closing chat; `/exit` or Ctrl-D exits.
 Reuse the command to resume the saved conversation. The model and workspace must
-match. Choosing a workspace grants file reads and edits, **not shell execution**.
-Run tests yourself and review changes. Live turns consume your provider allowance.
+match. Workspace modes grant file reads and edits. Add **--allow-shell** to the
+interactive command to let Rein request commands such as cargo test. You must
+approve each command at a foreground Unix terminal. Approved commands run as
+your user without a sandbox. Review changes. Live turns consume your provider allowance.
 See the [interactive CLI guide](docs/cli.md) for commands, failure handling,
 OpenAI-compatible setup and an offline demo that needs no credentials.
 
@@ -54,7 +56,8 @@ before exiting nonzero.
 
 `run`/`go` grant only typed `echo`. Opt-in `code`/`go-code` modes authorize
 [workspace reading, search and guarded edits](docs/workspace-tools.md).
-There is no arbitrary shell, automatic retry, HTTP server or Dart binding.
+One-shot modes do not expose shell. There is no automatic retry, HTTP server
+or Dart binding.
 
 For OpenCode Go setup see [provider configuration](docs/opencode-go.md). To test
 complete coding workflows, see [agent-task evaluation](docs/evaluation.md):
@@ -193,8 +196,8 @@ can lose the current run. Tool cancellation cannot undo external effects; custom
 effectful executors need host approvals, idempotency and durable journaling before
 production use. Never automatically replay an interrupted operation.
 
-The deadline is elapsed run time, including tool waits; human approval pauses are
-not implemented. Request bytes are not tokens. Output-token usage is provider
+The deadline is elapsed run time, including tool and CLI approval waits.
+Request bytes are not tokens. Output-token usage is provider
 reported; if absent, it stays unknown and consumes the remaining run allowance
 for scheduling. Provider limits are best-effort, not a financial spending cap.
 

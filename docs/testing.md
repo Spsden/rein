@@ -53,6 +53,16 @@ OpenCode Go `glm-5.3-flash` chat completed two turns and correctly recalled a wo
 from the preceding turn (2 calls, 93 provider-reported output tokens). These are
 terminal/conversation checks, not a new coding-quality benchmark.
 
+## Approved shell result — 2026-11-08
+
+80 Rust tests passed on macOS, including rejection of shell opt-in with piped
+input. The release binary passed all three pseudo-terminal checks. The shell
+check ran a real Cargo test in a disposable crate and delivered its output to
+a loopback model fixture. It also verified denial, cancellation before launch,
+process-group cancellation, nonzero exit status, output truncation, provider
+environment isolation, and that reopening without the flag revokes shell access.
+Formatting and strict Clippy passed. No new live provider call was needed.
+
 ## Reproduce commands
 
 The initial local result above is historical. The iteration adds queued-budget
@@ -113,7 +123,7 @@ No API keys, paid requests or real effectful tools are required by any test.
 Tests prove these cases, not every possible provider input or OS behavior.
 Additional providers, real authenticated inference, very large workloads,
 crash/power-loss durability, cross-platform filesystem semantics and concurrent
-snapshot writers are not certified. Human approval workflows, model-specific
+snapshot writers are not certified. Runtime-level approval workflows, model-specific
 tokenizers, context compaction, side-effect journaling, retries and Dart IPC are
 not implemented. See architecture documentation before enabling effectful tools.
 

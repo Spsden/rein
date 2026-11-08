@@ -45,7 +45,7 @@ Terminal control characters from model text are removed before display.
   1 MB; an oversized paste is discarded through `/end`, not submitted as tasks.
 - `/exit` or `/quit` exits; Ctrl-D at an empty prompt also exits.
 - Ctrl-C while editing clears input. During a run it requests cancellation and
-  returns to the prompt after settlement/checkpointing.
+returns to the prompt after settlement/checkpointing.
 - Unknown slash commands are local errors, not model requests. Start with `//`
   to submit a literal leading slash: `//help` sends `/help` to the model.
 
@@ -73,11 +73,43 @@ is not added to history; the accepted user input remains. Completed tool effects
 are not undone. An interrupted filesystem operation may have an uncertain outcome:
 inspect changes before asking for a retry. There are no automatic retries.
 
-The CLI grants `list_files`, `read_file`, `search`, `edit_file` and `write_file`
-inside the chosen workspace. It does **not** grant shell commands or run tests.
-Use a separate terminal for `cargo test`, other verifiers and inspecting diffs.
-See [workspace tool boundaries](workspace-tools.md). Model quality and broad
+The CLI grants file tools inside the chosen workspace. See
+[workspace tool boundaries](workspace-tools.md). Model quality and broad
 Pi/OpenCode parity are not established by the terminal interface.
+
+## Running commands and tests
+
+Launch from a foreground Unix terminal with explicit opt-in:
+
+~~~sh
+./target/release/rein chat /tmp/rein-chat.json glm-5.3-flash /path/to/project --allow-shell
+~~~
+
+At the prompt, try: “Fix the failing test without changing the test itself,
+then run cargo test and tell me what passed.” Rein shows the working directory
+and exact shell input (with nonprintable/non-ASCII characters escaped). Type
+the displayed confirmation, such as **run 4f1d90ac**, to run that one command.
+Enter or an incorrect response denies it. Ctrl-C cancels the turn, including
+any pending approval. The launch flag applies only to this invocation;
+resuming without it disables shell even if earlier turns used it.
+
+- **This is not a sandbox.** The command starts at the workspace root, but
+  can access other paths, the network and anything your account can access.
+  Build/test scripts can themselves execute arbitrary code. Only enable this
+  in repositories you trust, and inspect every command before approving.
+- Commands run as non-interactive **/bin/sh -c** with no stdin. Provider
+  keys and other environment variables are not inherited automatically; a
+  small toolchain allow-list is kept. Commands can still read credentials
+  from files or other accessible sources.
+- The tool returns the real exit status and the first 4 KiB of each output
+  stream, with truncation flags. Output is sent to the provider and saved
+  in the conversation. Do not approve commands that print secrets.
+- Approval expires after 60 seconds and a command times out after 120 seconds;
+  the overall turn deadline still applies. Cancellation/timeout kills the
+  command's process group, but cannot undo effects or stop detached processes
+  that escaped the group. Do not run background jobs or interactive commands.
+- Without this flag, run tests yourself in another terminal. Shell is not
+  available to piped input, the offline demo, or the one-shot JSON modes.
 
 ## Other providers and offline testing
 
@@ -105,5 +137,6 @@ python3 tests/terminal_cli.py target/release/rein
 Cargo tests cover commands, multiline input, persistence, bounded-paste rejection,
 corrupt-session protection, credentials, streamed output and local-provider file
 edits after a failed turn. The Python standard-library checks use real POSIX
-pseudo-terminals for editing/history, paste cancellation, EOF/resume and cancelling
-a streamed model response before completing another turn. Neither needs a real key.
+pseudo-terminals for editing/history, paste cancellation, EOF/resume, cancelling
+a streamed model response, and exercising shell opt-in, approval, output limits
+and cancellation. Neither needs a real key.
