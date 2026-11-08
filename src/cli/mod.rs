@@ -3,6 +3,7 @@ mod demo;
 mod display;
 mod host;
 mod session;
+mod shell;
 
 use rein::provider::OpenAiBackend;
 use rein::runtime::ModelBackend;
@@ -14,8 +15,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const HELP: &str = "Rein — a small Rust agent harness
 
 Interactive (readable output, editing/history, saved conversation):
-  rein chat SESSION.json MODEL WORKSPACE         OpenCode Go
-  rein chat-openai SESSION.json MODEL WORKSPACE  OpenAI-compatible
+  rein chat SESSION.json MODEL WORKSPACE [--allow-shell]         OpenCode Go
+  rein chat-openai SESSION.json MODEL WORKSPACE [--allow-shell]  OpenAI-compatible
   rein chat-demo SESSION.json                   Offline echo demo, not an LLM
 
 One task (JSON Lines output):
@@ -28,7 +29,8 @@ One task (JSON Lines output):
 Resume by reusing the same session path and settings. Quote PROMPT as one argument.
 run/code/chat-openai use OPENAI_API_KEY and optional OPENAI_BASE_URL (Chat Completions).
 go/go-code/chat use OPENCODE_GO_API_KEY. Credentials must be in the environment.
-Workspace modes authorize reads and edits, but NO command execution.
+Workspace modes authorize reads and edits. Shell is off unless --allow-shell is set
+in a Unix terminal; each command needs confirmation and runs without a sandbox.
 Other modes grant only echo. Chat commands: /help, /status, /paste, /exit.
 Ctrl-C cancels a running turn; chat stays open. Ctrl-D exits at the prompt.
 Session files contain conversation data. Use one process per session and workspace.";
@@ -41,9 +43,15 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     }
     match args.as_slice() {
         [command, path] if command == "chat-demo" => {
-            execute(path, "demo", "demo", None, None, |_, _| Ok(demo::Demo)).await
+            execute(path, "demo", "demo", None, None, false, |_, _| {
+                Ok(demo::Demo)
+            })
+            .await
         }
-        [command, path, model, root] if command == "chat" || command == "chat-openai" => {
+        [command, path, model, root, flags @ ..]
+            if (command == "chat" || command == "chat-openai")
+                && (flags.is_empty() || flags == ["--allow-shell"]) =>
+        {
             let (connection, config) = provider_config(command == "chat")?;
             execute(
                 path,
@@ -51,12 +59,13 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 model,
                 None,
                 Some(root),
+                !flags.is_empty(),
                 |connection, id| Ok(OpenAiBackend::for_session(connection, config, id)?),
             )
             .await
         }
         [command, path, prompt] if command == "demo" => {
-            execute(path, "demo", "demo", Some(prompt), None, |_, _| {
+            execute(path, "demo", "demo", Some(prompt), None, false, |_, _| {
                 Ok(demo::Demo)
             })
             .await
@@ -69,6 +78,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 model,
                 Some(prompt),
                 None,
+                false,
                 |connection, id| Ok(OpenAiBackend::for_session(connection, config, id)?),
             )
             .await
@@ -81,6 +91,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 model,
                 Some(prompt),
                 Some(root),
+                false,
                 |connection, id| Ok(OpenAiBackend::for_session(connection, config, id)?),
             )
             .await
@@ -114,12 +125,13 @@ async fn execute<B: ModelBackend>(
     model: &str,
     prompt: Option<&str>,
     workspace: Option<&str>,
+    allow_shell: bool,
     make_backend: impl FnOnce(&str, &str) -> Result<B, Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
     if model.trim().is_empty() || prompt.is_some_and(|p| !session::valid_prompt(p)) {
         return Err("prompt/model is empty or prompt exceeds 1 MB".into());
     }
-    let mut host = session::SessionHost::open(path, connection, model, workspace)?;
+    let mut host = session::SessionHost::open(path, connection, model, workspace, allow_shell)?;
     let backend = make_backend(&host.session.model.connection_id, host.session.id())?;
     if let Some(prompt) = prompt {
         let mut stdout = std::io::stdout().lock();

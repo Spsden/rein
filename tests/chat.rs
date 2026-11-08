@@ -133,6 +133,28 @@ fn chat_requires_its_explicit_provider_key_before_creating_session() {
 }
 
 #[test]
+fn shell_opt_in_cannot_be_used_with_piped_input() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("chat.json");
+    let output = Command::new(env!("CARGO_BIN_EXE_rein"))
+        .args([
+            "chat-openai",
+            path.to_str().unwrap(),
+            "model",
+            directory.path().to_str().unwrap(),
+            "--allow-shell",
+        ])
+        .env("OPENAI_API_KEY", "fixture")
+        .env("OPENAI_BASE_URL", "http://127.0.0.1:9/v1")
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("requires"));
+    assert!(!path.exists());
+}
+
+#[test]
 fn failed_turn_recovers_and_real_streaming_tools_preserve_conversation() {
     use serde_json::{Value, json};
     use std::io::{BufRead, BufReader, Read};

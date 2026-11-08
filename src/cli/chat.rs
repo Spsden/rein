@@ -15,7 +15,7 @@ const HELP: &str = "/help     Show commands
 Use // to send a prompt beginning with /, e.g. //help.
 Up/Down browse previous prompts; normal cursor editing is available.
 Ctrl-C during a run cancels it and returns here. Edits already made remain.
-Tools can read and edit workspace files; shell/test execution is NOT available.";
+Shell is off by default. With --allow-shell, approve each command at the terminal.";
 
 pub(super) async fn run(
     mut host: SessionHost,
@@ -129,7 +129,7 @@ pub(super) async fn run(
                 writeln!(stdout, "[turn stopped: {error} · session saved]")?;
                 writeln!(
                     stdout,
-                    "Any unfinished streamed answer was not accepted. Completed file edits remain.\n"
+                    "Any unfinished streamed answer was not accepted. Completed edits and command effects remain.\n"
                 )?;
             }
             Err(error) => return Err(error),
@@ -160,8 +160,13 @@ fn status(host: &SessionHost) {
     );
     if let Some(root) = &host.workspace {
         println!(
-            "Workspace: {} (reads + edits; no shell)",
-            safe(&root.display().to_string())
+            "Workspace: {} (reads + edits; {})",
+            safe(&root.display().to_string()),
+            if host.shell_enabled {
+                "shell requires approval; NOT sandboxed"
+            } else {
+                "no shell"
+            }
         );
     }
 }

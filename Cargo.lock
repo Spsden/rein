@@ -1212,6 +1212,7 @@ version = "0.1.0"
 dependencies = [
  "cap-std",
  "futures",
+ "libc",
  "rig-core",
  "rig-reqwest",
  "rustyline",
