@@ -100,3 +100,28 @@ library channel already defines live control semantics. A future Dart process
 adapter can map those controls into the channel and events out as JSON Lines,
 with explicit request/run IDs and protocol versioning. Keep that adapter outside
 the session/core loop; do not let serialized tool requests become permissions.
+## Synapse host transport
+
+Run the binary with `host-v1` to give a parent process the model and tool
+ports. This mode has no local tools, credentials, network client or session
+files. It runs one attempt, starts from a parent-supplied transcript and exits
+after a terminal frame. Use a trusted parent and keep stderr separate.
+
+Both directions carry UTF-8 JSON objects, one per line, at most 2 MiB per frame.
+The parent sends `start` with `run_id`, `instructions`, `history` (text user
+and assistant messages), `prompt`, `tools` (name, description, parameters)
+and `max_tokens`. The child answers with `ready` and version 1.
+
+- `model` requests contain a numeric `id` and a payload with canonical
+  `messages` and remaining `max_tokens`. Reply with `model_result`, the same
+  `id`, `text`, `reasoning`, `calls` (id, name, arguments), nullable
+  `output_tokens`, and `finish` (stop, tool_calls or invalid).
+- `accepted` confirms a model turn was validated before any of its tool
+  requests. `tool` carries a numeric request `id` and payload (call id, name,
+  arguments). Reply with `tool_result`, the request id and a string `content`.
+  The parent owns authorization and any effects.
+- A parent can send `steer` with a unique string `id` and `text`. Rein sends
+  `steer_accepted` once it adds the input to accepted history. `cancel` needs
+  no arguments. EOF or malformed input cancels an active attempt.
+- `finished` (nullable output_tokens) or `failed` (code) terminates the run.
+  Missing or incompatible frames must not cause the parent to replay effects.
